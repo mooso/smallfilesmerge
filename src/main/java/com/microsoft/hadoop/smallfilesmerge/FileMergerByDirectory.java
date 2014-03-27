@@ -11,26 +11,26 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 public class FileMergerByDirectory extends Configured implements Tool {
 	
-	public static class DirectoryMergeMapper extends Mapper<IntWritable, Text, IntWritable, Text> {
+	public static class DirectoryMergeMapper extends Mapper<IntWritable, Text, NullWritable, Text> {
 		private Text outputValue = new Text();
 
 		@Override
 		protected void map(IntWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
-			Path inputDir = new Path(value.toString());
-			FileSystem fs = inputDir.getFileSystem(context.getConfiguration());
-			for (FileStatus currentFile : fs.listStatus(inputDir)) {
-				FSDataInputStream inputStream = fs.open(currentFile.getPath());
-				try {
-					BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-					String line;
-					while ((line = reader.readLine()) != null) {
-						outputValue.set(line);
-						context.write(key, outputValue);
-					}
-				} finally {
-					inputStream.close();
+			Path inputFile = new Path(value.toString());
+			System.out.println("Processing file " + inputFile.toString());
+			FileSystem fs = inputFile.getFileSystem(context.getConfiguration());
+			FSDataInputStream inputStream = fs.open(inputFile);
+			try {
+				BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+				String line;
+				while ((line = reader.readLine()) != null) {
+					outputValue.set(line);
+					context.write(NullWritable.get(), outputValue);
 				}
+				reader.close();
+			} finally {
+				inputStream.close();
 			}
 		}
 	}
@@ -60,8 +60,10 @@ public class FileMergerByDirectory extends Configured implements Tool {
 					try {
 						BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream));
 						for (int lineIndex = 0; lineIndex < numLines; lineIndex++) {
-							writer.write("F" + fileIndex + "D" + dirIndex + "L" + lineIndex);
+							writer.write("D" + dirIndex + "F" + fileIndex + "L" + lineIndex);
+							writer.newLine();
 						}
+						writer.close();
 					} finally {
 						outputStream.close();
 					}
@@ -85,7 +87,7 @@ public class FileMergerByDirectory extends Configured implements Tool {
 		CombineDirectoryConfiguration.configureInputPath(job.getConfiguration(), inputPath);
 		job.setJarByClass(getClass());
 		job.setMapperClass(DirectoryMergeMapper.class);
-		job.setMapOutputKeyClass(IntWritable.class);
+		job.setMapOutputKeyClass(NullWritable.class);
 		job.setMapOutputValueClass(Text.class);
 		job.setInputFormatClass(CombineDirectoryInputFormat.class);
 		FileOutputFormat.setOutputPath(job, outputPath);
