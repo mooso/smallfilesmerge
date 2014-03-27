@@ -39,17 +39,20 @@ public class FileMergerByDirectory extends Configured implements Tool {
 	@Override
 	public int run(String[] args) throws Exception {
 		if (args.length < 2) {
-			System.out.printf(
-					"Usage: hadoop jar <jarPath> %s <inputPath> <outputPath> [-popInput]\n",
-					getClass().getName());
+			writeUsage();
 			return 1;
 		}
 		Path inputPath = new Path(args[0]);
 		Path outputPath = new Path(args[1]);
 		if (args.length >= 3 && args[2].trim().equalsIgnoreCase("-popInput")) {
-			int numDirs = 2, numFiles = 5;
+			if (args.length < 5) {
+				writeUsage();
+				return 1;
+			}
+			int numDirs = Integer.parseInt(args[3]), numFiles = Integer.parseInt(args[4]);
 			System.out.printf("Populating %d directories, each with %d files\n",
 					numDirs, numFiles);
+			inputPath.getFileSystem(getConf()).delete(inputPath, true);
 			Job popJob = configurePopulationJob(inputPath, numDirs, numFiles);
 			popJob.submit();
 			if (popJob.waitForCompletion(true)) {
@@ -69,6 +72,12 @@ public class FileMergerByDirectory extends Configured implements Tool {
 		return 0;
 	}
 
+	private void writeUsage() {
+		System.out.printf(
+				"Usage: hadoop jar <jarPath> %s <inputPath> <outputPath> [-popInput numDirs numFiles]\n",
+				getClass().getName());
+	}
+
 	private Job configurePopulationJob(Path outputPath, int numDirs, int numFiles) throws IOException {
 		Job job = new Job(getConf());
 		DirectoryPopulatorConfiguration.configure(job.getConfiguration(), outputPath, numDirs, numFiles);
@@ -77,6 +86,7 @@ public class FileMergerByDirectory extends Configured implements Tool {
 		job.setMapOutputKeyClass(IntWritable.class);
 		job.setMapOutputValueClass(Text.class);
 		job.setInputFormatClass(DirectoryPopulatorInputFormat.class);
+		job.setNumReduceTasks(0);
 		job.setOutputFormatClass(NullOutputFormat.class);
 		return job;
 	}
@@ -89,6 +99,7 @@ public class FileMergerByDirectory extends Configured implements Tool {
 		job.setMapOutputKeyClass(NullWritable.class);
 		job.setMapOutputValueClass(Text.class);
 		job.setInputFormatClass(CombineDirectoryInputFormat.class);
+		job.setNumReduceTasks(0);
 		FileOutputFormat.setOutputPath(job, outputPath);
 		return job;
 	}
