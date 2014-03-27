@@ -7,8 +7,7 @@ import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.*;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.*;
 
 public class FileMergerByDirectory extends Configured implements Tool {
 	
@@ -43,7 +42,7 @@ public class FileMergerByDirectory extends Configured implements Tool {
 			return 1;
 		}
 		Path[] inputPaths = Utils.stringToPaths(args[0]);
-		Path outputPath = new Path(args[1]);
+		Path[] outputPaths = Utils.stringToPaths(args[1]);
 		if (args.length >= 3 && args[2].trim().equalsIgnoreCase("-popInput")) {
 			if (args.length < 5) {
 				writeUsage();
@@ -52,9 +51,7 @@ public class FileMergerByDirectory extends Configured implements Tool {
 			int numDirs = Integer.parseInt(args[3]), numFiles = Integer.parseInt(args[4]);
 			System.out.printf("Populating %d directories, each with %d files\n",
 					numDirs, numFiles);
-			for (Path inputPath : inputPaths) {
-				inputPath.getFileSystem(getConf()).delete(inputPath, true);
-			}
+			deleteAll(inputPaths);
 			Job popJob = configurePopulationJob(inputPaths, numDirs, numFiles);
 			long startPopTime = System.currentTimeMillis();
 			popJob.submit();
@@ -65,8 +62,8 @@ public class FileMergerByDirectory extends Configured implements Tool {
 				return 2;
 			}
 		}
-		outputPath.getFileSystem(getConf()).delete(outputPath, true);
-		Job job = configureJob(inputPaths, outputPath);
+		deleteAll(outputPaths);
+		Job job = configureJob(inputPaths, outputPaths);
 		long startMergeTime = System.currentTimeMillis();
 		job.submit();
 		if (job.waitForCompletion(true)) {
@@ -76,6 +73,12 @@ public class FileMergerByDirectory extends Configured implements Tool {
 			return 2;
 		}
 		return 0;
+	}
+
+	private void deleteAll(Path[] paths) throws IOException {
+		for (Path path : paths) {
+			path.getFileSystem(getConf()).delete(path, true);
+		}
 	}
 
 	private void writeUsage() {
@@ -97,7 +100,7 @@ public class FileMergerByDirectory extends Configured implements Tool {
 		return job;
 	}
 
-	private Job configureJob(Path[] inputPaths, Path outputPath) throws IOException {
+	private Job configureJob(Path[] inputPaths, Path[] outputPaths) throws IOException {
 		Job job = new Job(getConf());
 		CombineDirectoryConfiguration.configureInputPaths(job.getConfiguration(), inputPaths);
 		job.setJarByClass(getClass());
@@ -106,7 +109,8 @@ public class FileMergerByDirectory extends Configured implements Tool {
 		job.setMapOutputValueClass(Text.class);
 		job.setInputFormatClass(CombineDirectoryInputFormat.class);
 		job.setNumReduceTasks(0);
-		FileOutputFormat.setOutputPath(job, outputPath);
+		MultiFileOutputFormat.setOutputDirs(job, outputPaths);
+		job.setOutputFormatClass(MultiFileOutputFormat.class);
 		return job;
 	}
 
