@@ -20,7 +20,7 @@
   <version>0.0.1</version>
   <packaging>jar</packaging>
 
-  <name>Microsoft Hadoop Small file merger/name>
+  <name>Microsoft Hadoop Small file merger</name>
   <description>MR job to merge small files</description>
 
   <licenses>
