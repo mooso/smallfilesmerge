@@ -35,7 +35,7 @@ public class DirectoryFileNameRecordReader
 
 	@Override
 	public float getProgress() throws IOException, InterruptedException {
-		return (float)(allFiles.length - currentLocation) / (float)allFiles.length;
+		return (float)currentLocation / (float)allFiles.length;
 	}
 
 	@Override

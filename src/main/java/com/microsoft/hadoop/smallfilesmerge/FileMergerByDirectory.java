@@ -8,6 +8,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 
 public class FileMergerByDirectory extends Configured implements Tool {
 	
@@ -46,40 +47,38 @@ public class FileMergerByDirectory extends Configured implements Tool {
 		Path inputPath = new Path(args[0]);
 		Path outputPath = new Path(args[1]);
 		if (args.length >= 3 && args[2].trim().equalsIgnoreCase("-popInput")) {
-			int numDirs = 2, numFiles = 5, numLines = 3;
-			System.out.printf("Populating %d directories, each with %d files, each with %d lines",
-					numDirs, numFiles, numLines);
-			FileSystem fs = inputPath.getFileSystem(getConf());
-			for (int dirIndex = 0; dirIndex < numDirs; dirIndex++) {
-				Path newDir = new Path(inputPath, "dir" + dirIndex);
-				fs.delete(newDir, true);
-				fs.mkdirs(newDir);
-				for (int fileIndex = 0; fileIndex < numFiles; fileIndex++) {
-					Path newFile = new Path(newDir, "file" + fileIndex);
-					FSDataOutputStream outputStream = fs.create(newFile);
-					try {
-						BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream));
-						for (int lineIndex = 0; lineIndex < numLines; lineIndex++) {
-							writer.write("D" + dirIndex + "F" + fileIndex + "L" + lineIndex);
-							writer.newLine();
-						}
-						writer.close();
-					} finally {
-						outputStream.close();
-					}
-				}
+			int numDirs = 2, numFiles = 5;
+			System.out.printf("Populating %d directories, each with %d files\n",
+					numDirs, numFiles);
+			Job popJob = configurePopulationJob(inputPath, numDirs, numFiles);
+			popJob.submit();
+			if (popJob.waitForCompletion(true)) {
+				System.out.println("Done populating!");
+			} else {
+				return 2;
 			}
-			System.out.printf("Done!");
 		}
 		outputPath.getFileSystem(getConf()).delete(outputPath, true);
 		Job job = configureJob(inputPath, outputPath);
 		job.submit();
 		if (job.waitForCompletion(true)) {
-			System.out.println("Done!");
+			System.out.println("Done with everything!");
 		} else {
 			return 2;
 		}
 		return 0;
+	}
+
+	private Job configurePopulationJob(Path outputPath, int numDirs, int numFiles) throws IOException {
+		Job job = new Job(getConf());
+		DirectoryPopulatorConfiguration.configure(job.getConfiguration(), outputPath, numDirs, numFiles);
+		job.setJarByClass(getClass());
+		job.setMapperClass(DirectoryPopulatorMapper.class);
+		job.setMapOutputKeyClass(IntWritable.class);
+		job.setMapOutputValueClass(Text.class);
+		job.setInputFormatClass(DirectoryPopulatorInputFormat.class);
+		job.setOutputFormatClass(NullOutputFormat.class);
+		return job;
 	}
 
 	private Job configureJob(Path inputPath, Path outputPath) throws IOException {

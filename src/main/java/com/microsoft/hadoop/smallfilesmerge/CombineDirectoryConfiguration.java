@@ -5,7 +5,6 @@ import org.apache.hadoop.fs.*;
 
 public class CombineDirectoryConfiguration {
 	public static enum Keys {
-		// The table name.
 		INPUT_DIRECTORY_PATH("combine.directory.input.path");
 	
 		private final String key;
