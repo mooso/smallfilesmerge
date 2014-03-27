@@ -19,7 +19,7 @@ public class FileMergerByDirectory extends Configured implements Tool {
 		protected void map(IntWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
 			Path inputFile = new Path(value.toString());
-			System.out.println("Processing file " + inputFile.toString());
+			//System.out.println("Processing file " + inputFile.toString());
 			FileSystem fs = inputFile.getFileSystem(context.getConfiguration());
 			FSDataInputStream inputStream = fs.open(inputFile);
 			try {
@@ -54,18 +54,22 @@ public class FileMergerByDirectory extends Configured implements Tool {
 					numDirs, numFiles);
 			inputPath.getFileSystem(getConf()).delete(inputPath, true);
 			Job popJob = configurePopulationJob(inputPath, numDirs, numFiles);
+			long startPopTime = System.currentTimeMillis();
 			popJob.submit();
 			if (popJob.waitForCompletion(true)) {
-				System.out.println("Done populating!");
+				System.out.printf("Done populating - took %d seconds.\n",
+						(System.currentTimeMillis() - startPopTime) / 1000);
 			} else {
 				return 2;
 			}
 		}
 		outputPath.getFileSystem(getConf()).delete(outputPath, true);
 		Job job = configureJob(inputPath, outputPath);
+		long startMergeTime = System.currentTimeMillis();
 		job.submit();
 		if (job.waitForCompletion(true)) {
-			System.out.println("Done with everything!");
+			System.out.printf("Done merging - took %d seconds.\n",
+					(System.currentTimeMillis() - startMergeTime) / 1000);
 		} else {
 			return 2;
 		}
