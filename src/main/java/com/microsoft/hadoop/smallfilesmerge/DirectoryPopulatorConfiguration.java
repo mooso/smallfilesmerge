@@ -5,7 +5,7 @@ import org.apache.hadoop.fs.*;
 
 public class DirectoryPopulatorConfiguration {
 	public static enum Keys {
-		OUTPUT_DIRECTORY_PATH("directory.populator.input.path"),
+		OUTPUT_DIRECTORY_PATHS("directory.populator.input.paths"),
 		NUM_DIRECTORIES("directory.populator.num.directories"),
 		NUM_FILES_PER_DIRECTORY("directory.populator.num.files");
 		
@@ -21,8 +21,9 @@ public class DirectoryPopulatorConfiguration {
 		}
 	}
 
-	public static Path getOutputDirectoryPath(Configuration conf) {
-		return new Path(conf.get(Keys.OUTPUT_DIRECTORY_PATH.getKey()));
+	public static Path[] getOutputDirectoryPaths(Configuration conf) {
+		String confValue = conf.get(Keys.OUTPUT_DIRECTORY_PATHS.getKey());
+		return Utils.stringToPaths(confValue);
 	}
 	
 	public static int getNumDirectories(Configuration conf) {
@@ -33,9 +34,9 @@ public class DirectoryPopulatorConfiguration {
 		return conf.getInt(Keys.NUM_FILES_PER_DIRECTORY.getKey(), 1);
 	}
 	
-	public static void configure(Configuration conf, Path outputPath,
+	public static void configure(Configuration conf, Path[] outputPaths,
 			int numDirectories, int numFilesPerDirectory) {
-		conf.set(Keys.OUTPUT_DIRECTORY_PATH.getKey(), outputPath.toString());
+		conf.set(Keys.OUTPUT_DIRECTORY_PATHS.getKey(), Utils.pathsToString(outputPaths));
 		conf.setInt(Keys.NUM_DIRECTORIES.getKey(), numDirectories);
 		conf.setInt(Keys.NUM_FILES_PER_DIRECTORY.getKey(), numFilesPerDirectory);
 	}

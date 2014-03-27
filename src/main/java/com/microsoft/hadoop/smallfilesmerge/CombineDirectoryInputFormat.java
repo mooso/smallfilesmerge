@@ -23,11 +23,13 @@ public class CombineDirectoryInputFormat extends InputFormat<IntWritable, Text> 
 			InterruptedException {
 		Configuration job = context.getConfiguration();
 		ArrayList<InputSplit> ret = new ArrayList<InputSplit>();
-		Path inputPath = CombineDirectoryConfiguration.getInputDirectoryPath(job);
-		FileStatus[] list = inputPath.getFileSystem(job).listStatus(inputPath);
-		for (FileStatus current : list) {
-			if (current.isDir()) {
-				ret.add(new CombineDirectoryInputSplit(current.getPath().toString()));
+		Path[] inputPaths = CombineDirectoryConfiguration.getInputDirectoryPath(job);
+		for (Path inputPath : inputPaths) {
+			FileStatus[] list = inputPath.getFileSystem(job).listStatus(inputPath);
+			for (FileStatus current : list) {
+				if (current.isDir()) {
+					ret.add(new CombineDirectoryInputSplit(current.getPath().toString()));
+				}
 			}
 		}
 		return ret;

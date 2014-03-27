@@ -19,10 +19,12 @@ public class DirectoryPopulatorInputFormat extends InputFormat<IntWritable, Text
 	public List<InputSplit> getSplits(JobContext context) throws IOException,
 			InterruptedException {
 		int numDirectories = DirectoryPopulatorConfiguration.getNumDirectories(context.getConfiguration());
-		Path outputPath = DirectoryPopulatorConfiguration.getOutputDirectoryPath(context.getConfiguration());
+		Path[] outputPaths = DirectoryPopulatorConfiguration.getOutputDirectoryPaths(context.getConfiguration());
+		int currentOutputPathIndex = 0;
 		ArrayList<InputSplit> ret = new ArrayList<InputSplit>();
 		for (int i = 0; i < numDirectories; i++) {
-			ret.add(new DirectoryPopulatorInputSplit(new Path(outputPath, "Dir" + i)));
+			ret.add(new DirectoryPopulatorInputSplit(new Path(outputPaths[currentOutputPathIndex], "Dir" + i)));
+			currentOutputPathIndex = (currentOutputPathIndex + 1) % outputPaths.length;
 		}
 		return ret;
 	}

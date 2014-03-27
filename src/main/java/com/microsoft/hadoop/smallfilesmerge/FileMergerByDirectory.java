@@ -42,7 +42,7 @@ public class FileMergerByDirectory extends Configured implements Tool {
 			writeUsage();
 			return 1;
 		}
-		Path inputPath = new Path(args[0]);
+		Path[] inputPaths = Utils.stringToPaths(args[0]);
 		Path outputPath = new Path(args[1]);
 		if (args.length >= 3 && args[2].trim().equalsIgnoreCase("-popInput")) {
 			if (args.length < 5) {
@@ -52,8 +52,10 @@ public class FileMergerByDirectory extends Configured implements Tool {
 			int numDirs = Integer.parseInt(args[3]), numFiles = Integer.parseInt(args[4]);
 			System.out.printf("Populating %d directories, each with %d files\n",
 					numDirs, numFiles);
-			inputPath.getFileSystem(getConf()).delete(inputPath, true);
-			Job popJob = configurePopulationJob(inputPath, numDirs, numFiles);
+			for (Path inputPath : inputPaths) {
+				inputPath.getFileSystem(getConf()).delete(inputPath, true);
+			}
+			Job popJob = configurePopulationJob(inputPaths, numDirs, numFiles);
 			long startPopTime = System.currentTimeMillis();
 			popJob.submit();
 			if (popJob.waitForCompletion(true)) {
@@ -64,7 +66,7 @@ public class FileMergerByDirectory extends Configured implements Tool {
 			}
 		}
 		outputPath.getFileSystem(getConf()).delete(outputPath, true);
-		Job job = configureJob(inputPath, outputPath);
+		Job job = configureJob(inputPaths, outputPath);
 		long startMergeTime = System.currentTimeMillis();
 		job.submit();
 		if (job.waitForCompletion(true)) {
@@ -82,9 +84,9 @@ public class FileMergerByDirectory extends Configured implements Tool {
 				getClass().getName());
 	}
 
-	private Job configurePopulationJob(Path outputPath, int numDirs, int numFiles) throws IOException {
+	private Job configurePopulationJob(Path[] outputPaths, int numDirs, int numFiles) throws IOException {
 		Job job = new Job(getConf());
-		DirectoryPopulatorConfiguration.configure(job.getConfiguration(), outputPath, numDirs, numFiles);
+		DirectoryPopulatorConfiguration.configure(job.getConfiguration(), outputPaths, numDirs, numFiles);
 		job.setJarByClass(getClass());
 		job.setMapperClass(DirectoryPopulatorMapper.class);
 		job.setMapOutputKeyClass(IntWritable.class);
@@ -95,9 +97,9 @@ public class FileMergerByDirectory extends Configured implements Tool {
 		return job;
 	}
 
-	private Job configureJob(Path inputPath, Path outputPath) throws IOException {
+	private Job configureJob(Path[] inputPaths, Path outputPath) throws IOException {
 		Job job = new Job(getConf());
-		CombineDirectoryConfiguration.configureInputPath(job.getConfiguration(), inputPath);
+		CombineDirectoryConfiguration.configureInputPaths(job.getConfiguration(), inputPaths);
 		job.setJarByClass(getClass());
 		job.setMapperClass(DirectoryMergeMapper.class);
 		job.setMapOutputKeyClass(NullWritable.class);

@@ -5,7 +5,7 @@ import org.apache.hadoop.fs.*;
 
 public class CombineDirectoryConfiguration {
 	public static enum Keys {
-		INPUT_DIRECTORY_PATH("combine.directory.input.path");
+		INPUT_DIRECTORY_PATHS("combine.directory.input.paths");
 	
 		private final String key;
 	
@@ -18,11 +18,11 @@ public class CombineDirectoryConfiguration {
 		}
 	}
 
-	public static Path getInputDirectoryPath(Configuration conf) {
-		return new Path(conf.get(Keys.INPUT_DIRECTORY_PATH.getKey()));
+	public static Path[] getInputDirectoryPath(Configuration conf) {
+		return Utils.stringToPaths(conf.get(Keys.INPUT_DIRECTORY_PATHS.getKey()));
 	}
 	
-	public static void configureInputPath(Configuration conf, Path inputPath) {
-		conf.set(Keys.INPUT_DIRECTORY_PATH.getKey(), inputPath.toString());
+	public static void configureInputPaths(Configuration conf, Path[] inputPaths) {
+		conf.set(Keys.INPUT_DIRECTORY_PATHS.getKey(), Utils.pathsToString(inputPaths));
 	}
 }
