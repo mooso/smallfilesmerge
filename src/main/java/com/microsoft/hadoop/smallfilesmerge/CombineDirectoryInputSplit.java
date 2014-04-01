@@ -8,15 +8,21 @@ import org.apache.hadoop.mapreduce.*;
 
 public class CombineDirectoryInputSplit extends InputSplit implements Writable {
 	private String directoryPath;
+	private int nameHashSlot;
 
 	public CombineDirectoryInputSplit() {}
 	
-	public CombineDirectoryInputSplit(String directoryPath) {
+	public CombineDirectoryInputSplit(String directoryPath, int nameHashSlot) {
 		this.directoryPath = directoryPath;
+		this.nameHashSlot = nameHashSlot;
 	}
 	
 	public Path getDirectoryPath() {
 		return new Path(directoryPath);
+	}
+
+	public int getNameHashSlot() {
+		return nameHashSlot;
 	}
 	
 	@Override
@@ -32,11 +38,13 @@ public class CombineDirectoryInputSplit extends InputSplit implements Writable {
 	
 	@Override
 	public void write(DataOutput out) throws IOException {
-		Text.writeString(out, directoryPath);
+		out.writeUTF(directoryPath);
+		out.writeInt(nameHashSlot);
 	}
 	
 	@Override
 	public void readFields(DataInput in) throws IOException {
-		directoryPath = Text.readString(in);
+		directoryPath = in.readUTF();
+		nameHashSlot = in.readInt();
 	}
 }

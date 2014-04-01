@@ -18,20 +18,27 @@ public class DirectoryFileNameRecordReader
 		Path myDir = ((CombineDirectoryInputSplit)split).getDirectoryPath();
 		FileSystem fs = myDir.getFileSystem(context.getConfiguration());
 		FileStatus[] obtained = fs.listStatus(myDir);
+		int nameHashSlot = ((CombineDirectoryInputSplit)split).getNameHashSlot();
+		int numNameHashSlots =
+				CombineDirectoryConfiguration.getNumNameHashSplits(context.getConfiguration());
 		allFiles = new ArrayList<FileStatus>(obtained.length + 1024);
 		for (FileStatus current : obtained) {
-			addAllFiles(fs, current);
+			addAllFiles(fs, current, nameHashSlot, numNameHashSlots);
 		}
 		currentLocation = -1;
 	}
 	
-	private void addAllFiles(FileSystem fs, FileStatus source) throws IOException {
+	private void addAllFiles(FileSystem fs, FileStatus source,
+			int nameHashSlot, int numNameHashSlots) throws IOException {
 		if (source.isDir()) {
 			for (FileStatus child : fs.listStatus(source.getPath())) {
-				addAllFiles(fs,  child);
+				addAllFiles(fs, child, nameHashSlot, numNameHashSlots);
 			}
 		} else {
-			allFiles.add(source);
+			if (numNameHashSlots == 1 ||
+					(source.getPath().getName().hashCode() % numNameHashSlots) == nameHashSlot) {
+				allFiles.add(source);
+			}
 		}
 	}
 

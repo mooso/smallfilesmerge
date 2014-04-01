@@ -24,11 +24,14 @@ public class CombineDirectoryInputFormat extends InputFormat<IntWritable, Text> 
 		Configuration job = context.getConfiguration();
 		ArrayList<InputSplit> ret = new ArrayList<InputSplit>();
 		Path[] inputPaths = CombineDirectoryConfiguration.getInputDirectoryPath(job);
+		int numNameHashSplits = CombineDirectoryConfiguration.getNumNameHashSplits(job);
 		for (Path inputPath : inputPaths) {
 			FileStatus[] list = inputPath.getFileSystem(job).listStatus(inputPath);
 			for (FileStatus current : list) {
 				if (current.isDir()) {
-					ret.add(new CombineDirectoryInputSplit(current.getPath().toString()));
+					for (int i = 0; i < numNameHashSplits; i++) {
+						ret.add(new CombineDirectoryInputSplit(current.getPath().toString(), i));
+					}
 				}
 			}
 		}

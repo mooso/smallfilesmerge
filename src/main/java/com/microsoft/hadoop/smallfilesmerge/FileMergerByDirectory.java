@@ -112,6 +112,7 @@ public class FileMergerByDirectory extends Configured implements Tool {
 	private Job configureJob(Path[] inputPaths, Path[] outputPaths) throws IOException {
 		Job job = new Job(getConf());
 		CombineDirectoryConfiguration.configureInputPaths(job.getConfiguration(), inputPaths);
+		CombineDirectoryConfiguration.setNumNameHashSplits(job.getConfiguration(), 10);
 		job.setJarByClass(getClass());
 		job.setMapperClass(DirectoryMergeMapper.class);
 		job.setMapOutputKeyClass(NullWritable.class);
