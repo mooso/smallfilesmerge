@@ -1,6 +1,7 @@
 package com.microsoft.hadoop.smallfilesmerge;
 
-import java.io.IOException;
+import java.io.*;
+import java.util.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
@@ -8,15 +9,30 @@ import org.apache.hadoop.mapreduce.*;
 
 public class DirectoryFileNameRecordReader
 	extends RecordReader<IntWritable, Text> {
-	private FileStatus[] allFiles;
+	private ArrayList<FileStatus> allFiles;
 	private int currentLocation;
 
 	@Override
 	public void initialize(InputSplit split, TaskAttemptContext context)
 			throws IOException, InterruptedException {
 		Path myDir = ((CombineDirectoryInputSplit)split).getDirectoryPath();
-		allFiles = myDir.getFileSystem(context.getConfiguration()).listStatus(myDir);
+		FileSystem fs = myDir.getFileSystem(context.getConfiguration());
+		FileStatus[] obtained = fs.listStatus(myDir);
+		allFiles = new ArrayList<FileStatus>(obtained.length + 1024);
+		for (FileStatus current : obtained) {
+			addAllFiles(fs, current);
+		}
 		currentLocation = -1;
+	}
+	
+	private void addAllFiles(FileSystem fs, FileStatus source) throws IOException {
+		if (source.isDir()) {
+			for (FileStatus child : fs.listStatus(source.getPath())) {
+				addAllFiles(fs,  child);
+			}
+		} else {
+			allFiles.add(source);
+		}
 	}
 
 	@Override
@@ -30,18 +46,18 @@ public class DirectoryFileNameRecordReader
 
 	@Override
 	public Text getCurrentValue() throws IOException, InterruptedException {
-		return new Text(allFiles[currentLocation].getPath().toString());
+		return new Text(allFiles.get(currentLocation).getPath().toString());
 	}
 
 	@Override
 	public float getProgress() throws IOException, InterruptedException {
-		return (float)currentLocation / (float)allFiles.length;
+		return (float)currentLocation / (float)allFiles.size();
 	}
 
 	@Override
 	public boolean nextKeyValue() throws IOException, InterruptedException {
 		currentLocation++;
-		return currentLocation < allFiles.length;
+		return currentLocation < allFiles.size();
 	}
 
 }

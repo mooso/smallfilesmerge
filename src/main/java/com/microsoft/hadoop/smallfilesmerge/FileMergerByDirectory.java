@@ -2,17 +2,24 @@ package com.microsoft.hadoop.smallfilesmerge;
 
 import java.io.*;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.output.*;
+import org.w3c.dom.Document;
 
 public class FileMergerByDirectory extends Configured implements Tool {
 	
 	public static class DirectoryMergeMapper extends Mapper<IntWritable, Text, NullWritable, Text> {
 		private Text outputValue = new Text();
+		private DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
+			
 
 		@Override
 		protected void map(IntWritable key, Text value, Context context)
@@ -22,13 +29,21 @@ public class FileMergerByDirectory extends Configured implements Tool {
 			FileSystem fs = inputFile.getFileSystem(context.getConfiguration());
 			FSDataInputStream inputStream = fs.open(inputFile);
 			try {
-				BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-				String line;
-				while ((line = reader.readLine()) != null) {
-					outputValue.set(line);
-					context.write(NullWritable.get(), outputValue);
+				DocumentBuilder docBuilder;
+				try {
+					docBuilder = docBuilderFactory.newDocumentBuilder();
+				} catch (ParserConfigurationException e) {
+					e.printStackTrace();
+					return;
 				}
-				reader.close();
+				Document doc;
+				try {
+					doc = docBuilder.parse(inputStream);
+				} catch (Exception ex) {
+					System.err.println("Encountered parse error - skipping: " + inputFile.toString());
+					return;
+				}
+				outputValue.set(doc.getDocumentElement().toString());
 			} finally {
 				inputStream.close();
 			}
