@@ -2,9 +2,7 @@ package com.microsoft.hadoop.smallfilesmerge;
 
 import java.io.*;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.stream.*;
 
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
@@ -12,15 +10,13 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.output.*;
-import org.w3c.dom.Document;
 
 public class FileMergerByDirectory extends Configured implements Tool {
 	
 	public static class DirectoryMergeMapper extends Mapper<IntWritable, Text, NullWritable, Text> {
 		private Text outputValue = new Text();
-		private DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
-			
-
+		XMLOutputFactory outputFactory = XMLOutputFactory.newInstance();
+		private XMLInputFactory inputFactory = XMLInputFactory.newInstance();
 		@Override
 		protected void map(IntWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
@@ -29,21 +25,19 @@ public class FileMergerByDirectory extends Configured implements Tool {
 			FileSystem fs = inputFile.getFileSystem(context.getConfiguration());
 			FSDataInputStream inputStream = fs.open(inputFile);
 			try {
-				DocumentBuilder docBuilder;
+				StringWriter stringWriter = new StringWriter();
 				try {
-					docBuilder = docBuilderFactory.newDocumentBuilder();
-				} catch (ParserConfigurationException e) {
+					XMLEventReader reader = inputFactory.createXMLEventReader(inputStream);
+					XMLEventWriter writer = outputFactory.createXMLEventWriter(stringWriter);
+					writer.add(reader);
+					writer.close();
+				} catch (XMLStreamException e) {
+					System.err.println("Encountered parse error - skipping: " + inputFile.toString());
 					e.printStackTrace();
 					return;
 				}
-				Document doc;
-				try {
-					doc = docBuilder.parse(inputStream);
-				} catch (Exception ex) {
-					System.err.println("Encountered parse error - skipping: " + inputFile.toString());
-					return;
-				}
-				outputValue.set(doc.getDocumentElement().toString());
+				outputValue.set(stringWriter.toString());
+				context.write(NullWritable.get(), outputValue);
 			} finally {
 				inputStream.close();
 			}
