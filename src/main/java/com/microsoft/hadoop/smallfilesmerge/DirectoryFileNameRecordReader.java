@@ -90,7 +90,7 @@ public class DirectoryFileNameRecordReader
 
 	private boolean doesMatchNameHash(String name) {
 		return numNameHashSlots == 1 ||
-				(name.hashCode() % numNameHashSlots) == nameHashSlot;
+				Math.abs(name.hashCode() % numNameHashSlots) == nameHashSlot;
 	}
 
 	@Override
