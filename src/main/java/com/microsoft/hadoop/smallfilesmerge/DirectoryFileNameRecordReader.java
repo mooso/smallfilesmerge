@@ -124,6 +124,14 @@ public class DirectoryFileNameRecordReader
 		}
 	}
 
+	private static long getBlobLength(ListBlobItem blob) {
+		if (!CloudBlob.class.isInstance(blob)) {
+			return 0;
+		}
+		CloudBlob asCloudBlob = (CloudBlob)blob;
+		return asCloudBlob.getProperties().getLength();
+	}
+
 	@Override
 	public boolean nextKeyValue() throws IOException, InterruptedException {
 		if (allFiles != null) {
@@ -132,16 +140,13 @@ public class DirectoryFileNameRecordReader
 		} else {
 			while (blobs.hasNext()) {
 				ListBlobItem currentBlob = blobs.next();
-				if (doesMatchNameHash(currentBlob)) {
+				if (doesMatchNameHash(currentBlob) && getBlobLength(currentBlob) > 0) {
 					String[] pathComponents = currentBlob.getUri().getPath().split("/");
 					String pathWithoutContainer =
 							currentBlob.getUri().getPath().substring(pathComponents[1].length() + 1);
 					currentPath = new Path(myDir.toUri().getScheme(), myDir.toUri().getAuthority(),
 							pathWithoutContainer);
-					FileStatus fileStatus = fs.getFileStatus(currentPath);
-					if (fileStatus != null && !fileStatus.isDir()) {
-						return true;
-					}
+					return true;
 				}
 			}
 			return false;

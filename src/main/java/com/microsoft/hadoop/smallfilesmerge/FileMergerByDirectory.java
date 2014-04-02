@@ -35,6 +35,11 @@ public class FileMergerByDirectory extends Configured implements Tool {
 					System.err.println("Encountered parse error - skipping: " + inputFile.toString());
 					e.printStackTrace();
 					return;
+				} catch (ArrayIndexOutOfBoundsException e) {
+					System.err.println("Encountered parse error due to JVM XML parser bug - skipping: " +
+							inputFile.toString());
+					e.printStackTrace();
+					return;
 				}
 				outputValue.set(stringWriter.toString());
 				context.write(NullWritable.get(), outputValue);
