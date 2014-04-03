@@ -1,9 +1,6 @@
 package com.microsoft.hadoop.smallfilesmerge;
 
 import java.io.*;
-import java.nio.charset.Charset;
-
-import javax.xml.stream.*;
 
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
@@ -13,65 +10,6 @@ import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.output.*;
 
 public class FileMergerByDirectory extends Configured implements Tool {
-	
-	public static class DirectoryMergeMapper extends Mapper<IntWritable, Text, NullWritable, Text> {
-		private Text outputValue = new Text();
-		XMLOutputFactory outputFactory = XMLOutputFactory.newInstance();
-		private XMLInputFactory inputFactory = XMLInputFactory.newInstance();
-
-		@Override
-		protected void map(IntWritable key, Text value, Context context)
-				throws IOException, InterruptedException {
-			if (value.toString().startsWith(DirectoryFileNameRecordReader.TAKE_PREVIOUS_PREFIX)) {
-				writePreviousMapOutput(value, context);
-				return;
-			}
-			Path inputFile = new Path(value.toString());
-			//System.out.println("Processing file " + inputFile.toString());
-			FileSystem fs = inputFile.getFileSystem(context.getConfiguration());
-			FSDataInputStream inputStream = fs.open(inputFile);
-			try {
-				StringWriter stringWriter = new StringWriter();
-				try {
-					XMLEventReader reader = inputFactory.createXMLEventReader(inputStream);
-					XMLEventWriter writer = outputFactory.createXMLEventWriter(stringWriter);
-					writer.add(reader);
-					writer.close();
-				} catch (XMLStreamException e) {
-					System.err.println("Encountered parse error - skipping: " + inputFile.toString());
-					e.printStackTrace();
-					return;
-				} catch (ArrayIndexOutOfBoundsException e) {
-					System.err.println("Encountered parse error due to JVM XML parser bug - skipping: " +
-							inputFile.toString());
-					e.printStackTrace();
-					return;
-				}
-				outputValue.set(stringWriter.toString());
-				context.write(NullWritable.get(), outputValue);
-			} finally {
-				inputStream.close();
-			}
-		}
-
-		private void writePreviousMapOutput(Text value, Context context)
-				throws IOException, InterruptedException {
-			Path previousFile = new Path(value.toString().substring(
-					DirectoryFileNameRecordReader.TAKE_PREVIOUS_PREFIX.length()));
-			FileSystem previousFs = previousFile.getFileSystem(context.getConfiguration());
-			InputStream previousStream = previousFs.open(previousFile);
-			BufferedReader reader = new BufferedReader(
-					new InputStreamReader(previousStream, Charset.forName("UTF-8")));
-			String currentLine;
-			while ((currentLine = reader.readLine()) != null) {
-				outputValue.set(currentLine);
-				context.write(NullWritable.get(), outputValue);
-				context.progress();
-			}
-			reader.close();
-			previousStream.close();
-		}
-	}
 
 	@Override
 	public int run(String[] args) throws Exception {
@@ -141,7 +79,6 @@ public class FileMergerByDirectory extends Configured implements Tool {
 	private Job configureJob(Path[] inputPaths, Path[] outputPaths) throws IOException {
 		Job job = new Job(getConf());
 		CombineDirectoryConfiguration.configureInputPaths(job.getConfiguration(), inputPaths);
-		CombineDirectoryConfiguration.setNumNameHashSplits(job.getConfiguration(), 10);
 		job.setJarByClass(getClass());
 		job.setMapperClass(DirectoryMergeMapper.class);
 		job.setMapOutputKeyClass(NullWritable.class);

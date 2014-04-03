@@ -8,6 +8,11 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.*;
 
+/**
+ * An input format that lists hands out each sub-directory in a directory
+ * to a separate mapper (or, optionally, to N mappers where  each mapper will
+ * handle files whose names hash to its slot).
+ */
 public class CombineDirectoryInputFormat extends InputFormat<IntWritable, Text> {
 	@Override
 	public RecordReader<IntWritable, Text> createRecordReader(

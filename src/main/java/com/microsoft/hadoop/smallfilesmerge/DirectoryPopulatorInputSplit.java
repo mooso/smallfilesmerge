@@ -8,13 +8,13 @@ import org.apache.hadoop.mapreduce.*;
 
 public class DirectoryPopulatorInputSplit extends InputSplit implements Writable {
 	private String directory;
-	
+
 	public DirectoryPopulatorInputSplit() {}
-	
+
 	public DirectoryPopulatorInputSplit(Path directory) {
 		this.directory = directory.toString();
 	}
-	
+
 	public Path getDirectory() {
 		return new Path(directory);
 	}

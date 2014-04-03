@@ -8,6 +8,11 @@ import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.output.*;
 
+/**
+ * An output format that takes a file output format, but instead of putting
+ * all the files into a single directory, split them across multiple ones
+ * based on task ID.
+ */
 public class MultiFileOutputFormat<K, V> extends OutputFormat<K, V> {
 	private FileOutputFormat<K, V> innerFormat = new TextOutputFormat<K, V>();
 	private static final String FILE_OUTPUT_DIR = "mapred.output.dir";

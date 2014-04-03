@@ -3,12 +3,16 @@ package com.microsoft.hadoop.smallfilesmerge;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
 
+/**
+ * The configuration helper/keys for the merger. 
+ */
 public class CombineDirectoryConfiguration {
 	public static enum Keys {
 		INPUT_DIRECTORY_PATHS("combine.directory.input.paths"),
 		NAME_HASH_SPLIT_COUNT("combine.directory.input.num.hash.names"),
 		INPUT_DIRECTORY_ACCOUNT_KEY("combine.directory.account.key"),
-		PREVIOUS_JOB_ATTEMPT_OUTPUT("combine.directory.previous.job.attempt.output");
+		PREVIOUS_JOB_ATTEMPT_OUTPUT("combine.directory.previous.job.attempt.output"),
+		INPUT_TRANSFORMER_CLASS("combine.directory.input.transformer");
 
 		private final String key;
 	
@@ -30,7 +34,12 @@ public class CombineDirectoryConfiguration {
 	}
 
 	public static int getNumNameHashSplits(Configuration conf) {
-		return conf.getInt(Keys.NAME_HASH_SPLIT_COUNT.getKey(), 1);
+		return conf.getInt(Keys.NAME_HASH_SPLIT_COUNT.getKey(), 10);
+	}
+
+	public static Class<? extends InputTransformer> getInputTransformerClass(Configuration conf) {
+		return conf.getClass(Keys.INPUT_TRANSFORMER_CLASS.getKey(), IdentityInputTransformer.class,
+				InputTransformer.class);
 	}
 
 	public static Path getPreviousJobAttemptOutput(Configuration conf) {

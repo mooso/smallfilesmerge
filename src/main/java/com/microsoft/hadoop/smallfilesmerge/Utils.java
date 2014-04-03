@@ -4,7 +4,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.util.*;
 
 class Utils {
-	
+
 	public static Path[] stringToPaths(String input) {
 		String[] splitString = StringUtils.split(input);
 		Path[] ret = new Path[splitString.length];
@@ -13,7 +13,7 @@ class Utils {
 		}
 		return ret;
 	}
-	
+
 	public static String pathsToString(Path[] paths) {
 		StringBuilder pathsBuilder = new StringBuilder();
 		boolean needComma = false;
@@ -26,5 +26,4 @@ class Utils {
 		}
 		return pathsBuilder.toString();
 	}
-
 }
