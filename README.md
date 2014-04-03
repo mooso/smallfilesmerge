@@ -21,5 +21,5 @@ From a PowerShell window, with mvn and git in the path. Assuming $clust is an HD
 * For testing, you can specify three additional arguments: `-popInput <numDirs> <numFiles>`, which will just populate `numDirectories` each with `numFiles` files in them.
 * For even faster merge jobs if you have lots of files, you can specify the account key for the input path in the define combine.directory.account.key. This will allow the merger to use storage API directly to more quickly list the input files. PowerShell example:
 
-	$defines = @{ "mapred.task.timeout"="6000000"; "combine.directory.account.key"=$(Get-AzureStorageKey $myStorageAccount).Primary }
-	$jobDef = New-AzureHDInsightMapReduceJobDefinition -JarFile "/jars/microsoft-hadoop-smallfilemerge-0.0.1.jar" -ClassName "com.microsoft.hadoop.smallfilesmerge.FileMergerByDirectory" -Arguments $inPath, $outPath -Defines $defines
+		$defines = @{ "mapred.task.timeout"="6000000"; "combine.directory.account.key"=$(Get-AzureStorageKey $myStorageAccount).Primary }
+		$jobDef = New-AzureHDInsightMapReduceJobDefinition -JarFile "/jars/microsoft-hadoop-smallfilemerge-0.0.1.jar" -ClassName "com.microsoft.hadoop.smallfilesmerge.FileMergerByDirectory" -Arguments $inPath, $outPath -Defines $defines
