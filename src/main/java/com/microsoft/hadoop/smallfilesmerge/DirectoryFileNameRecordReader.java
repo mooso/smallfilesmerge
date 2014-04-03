@@ -23,10 +23,15 @@ public class DirectoryFileNameRecordReader
 	private Path currentPath;
 	private Path myDir;
 	private FileSystem fs;
+	private Path previousOutputPath;
+	public static final String TAKE_PREVIOUS_PREFIX = "TakePrevious:";
 
 	@Override
 	public void initialize(InputSplit split, TaskAttemptContext context)
 			throws IOException, InterruptedException {
+		if (shouldSkip(context)) {
+			return;
+		}
 		myDir = ((CombineDirectoryInputSplit)split).getDirectoryPath();
 		nameHashSlot = ((CombineDirectoryInputSplit)split).getNameHashSlot();
 		numNameHashSlots = getNumNameHashSplits(context.getConfiguration());
@@ -38,6 +43,33 @@ public class DirectoryFileNameRecordReader
 			addUsingFileSystem();
 			currentLocation = -1;
 		}
+	}
+	
+	private boolean shouldSkip(TaskAttemptContext context) throws IOException {
+		Path previousJobAttemptPath = getPreviousJobAttemptOutput(context.getConfiguration());
+		if (previousJobAttemptPath == null) {
+			return false;
+		}
+		FileSystem mapOutputFs = previousJobAttemptPath.getFileSystem(context.getConfiguration());
+		FileStatus[] mapOutputs = mapOutputFs.listStatus(previousJobAttemptPath);
+		for (FileStatus currentOutput : mapOutputs) {
+			String[] parts = currentOutput.getPath().getName().split("-");
+			if (parts.length == 3) {
+				try {
+					int currentOutputId = Integer.parseInt(parts[2]);
+					if (currentOutputId == context.getTaskAttemptID().getTaskID().getId()) {
+						previousOutputPath = currentOutput.getPath();
+						currentLocation = -1;
+						System.out.println("Skipping and taking the previous attempt's output from " +
+								previousOutputPath + " instead.");
+						return true;
+					}
+				} catch (NumberFormatException ex) {
+					// Ignore.
+				}
+			}
+		}
+		return false;
 	}
 
 	private void addUsingFileSystem() throws IOException {
@@ -104,7 +136,9 @@ public class DirectoryFileNameRecordReader
 
 	@Override
 	public Text getCurrentValue() throws IOException, InterruptedException {
-		if (allFiles != null) {
+		if (previousOutputPath != null) {
+			return new Text(TAKE_PREVIOUS_PREFIX + previousOutputPath.toString());
+		} else if (allFiles != null) {
 			return new Text(allFiles.get(currentLocation).getPath().toString());
 		} else {
 			return new Text(currentPath.toString());
@@ -113,7 +147,14 @@ public class DirectoryFileNameRecordReader
 
 	@Override
 	public float getProgress() throws IOException, InterruptedException {
-		if (allFiles != null) {
+		if (previousOutputPath != null) {
+			if (currentLocation < 1) {
+				return 0.5f;
+			} else {
+				return 1.0f;
+			}
+		}
+		else if (allFiles != null) {
 			return (float)currentLocation / (float)allFiles.size();
 		} else {
 			if (!blobs.hasNext()) {
@@ -134,7 +175,14 @@ public class DirectoryFileNameRecordReader
 
 	@Override
 	public boolean nextKeyValue() throws IOException, InterruptedException {
-		if (allFiles != null) {
+		if (previousOutputPath != null) {
+			if (currentLocation >= 0) {
+				currentLocation++;
+				return false;
+			}
+			currentLocation++;
+			return true;
+		} else if (allFiles != null) {
 			currentLocation++;
 			return currentLocation < allFiles.size();
 		} else {

@@ -7,7 +7,8 @@ public class CombineDirectoryConfiguration {
 	public static enum Keys {
 		INPUT_DIRECTORY_PATHS("combine.directory.input.paths"),
 		NAME_HASH_SPLIT_COUNT("combine.directory.input.num.hash.names"),
-		INPUT_DIRECTORY_ACCOUNT_KEY("combine.directory.account.key");
+		INPUT_DIRECTORY_ACCOUNT_KEY("combine.directory.account.key"),
+		PREVIOUS_JOB_ATTEMPT_OUTPUT("combine.directory.previous.job.attempt.output");
 
 		private final String key;
 	
@@ -30,6 +31,15 @@ public class CombineDirectoryConfiguration {
 
 	public static int getNumNameHashSplits(Configuration conf) {
 		return conf.getInt(Keys.NAME_HASH_SPLIT_COUNT.getKey(), 1);
+	}
+
+	public static Path getPreviousJobAttemptOutput(Configuration conf) {
+		String path = conf.get(Keys.PREVIOUS_JOB_ATTEMPT_OUTPUT.getKey());
+		if (path != null) {
+			return new Path(path);
+		} else {
+			return null;
+		}
 	}
 
 	public static void configureInputPaths(Configuration conf, Path[] inputPaths) {

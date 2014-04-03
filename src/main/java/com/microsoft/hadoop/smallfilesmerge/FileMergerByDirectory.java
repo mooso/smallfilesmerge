@@ -1,6 +1,7 @@
 package com.microsoft.hadoop.smallfilesmerge;
 
 import java.io.*;
+import java.nio.charset.Charset;
 
 import javax.xml.stream.*;
 
@@ -17,9 +18,14 @@ public class FileMergerByDirectory extends Configured implements Tool {
 		private Text outputValue = new Text();
 		XMLOutputFactory outputFactory = XMLOutputFactory.newInstance();
 		private XMLInputFactory inputFactory = XMLInputFactory.newInstance();
+
 		@Override
 		protected void map(IntWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
+			if (value.toString().startsWith(DirectoryFileNameRecordReader.TAKE_PREVIOUS_PREFIX)) {
+				writePreviousMapOutput(value, context);
+				return;
+			}
 			Path inputFile = new Path(value.toString());
 			//System.out.println("Processing file " + inputFile.toString());
 			FileSystem fs = inputFile.getFileSystem(context.getConfiguration());
@@ -46,6 +52,24 @@ public class FileMergerByDirectory extends Configured implements Tool {
 			} finally {
 				inputStream.close();
 			}
+		}
+
+		private void writePreviousMapOutput(Text value, Context context)
+				throws IOException, InterruptedException {
+			Path previousFile = new Path(value.toString().substring(
+					DirectoryFileNameRecordReader.TAKE_PREVIOUS_PREFIX.length()));
+			FileSystem previousFs = previousFile.getFileSystem(context.getConfiguration());
+			InputStream previousStream = previousFs.open(previousFile);
+			BufferedReader reader = new BufferedReader(
+					new InputStreamReader(previousStream, Charset.forName("UTF-8")));
+			String currentLine;
+			while ((currentLine = reader.readLine()) != null) {
+				outputValue.set(currentLine);
+				context.write(NullWritable.get(), outputValue);
+				context.progress();
+			}
+			reader.close();
+			previousStream.close();
 		}
 	}
 
